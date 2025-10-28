@@ -66,7 +66,7 @@ def find_license_plate_contours(edges: np.ndarray) -> list[dict]:
                     'area': area,
                     'aspect_ratio': aspect_ratio
                 })
-                print(f"Кандидат {len(candidates)}: {w}x{h}, соотношение: {aspect_ratio:.2f}")
+                print(f"Кандидат {len(candidates)}: {x=} {y=} {w}x{h}, соотношение: {aspect_ratio:.2f}")
 
     return candidates
 
@@ -115,7 +115,7 @@ def enhance_contrast(img: np.ndarray) -> np.ndarray:
     Улучшение контрастности специально для номерных знаков
     """
     # CLAHE для улучшения локального контраста
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     return clahe.apply(img)
 
 
@@ -126,6 +126,7 @@ def smart_morphology(edges: np.ndarray) -> np.ndarray:
     # Сначала закрытие для соединения близких границ
     kernel_close = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel_close)
+    return closed
 
     # Затем дилатация для утолщения линий
     kernel_dilate = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
@@ -133,8 +134,8 @@ def smart_morphology(edges: np.ndarray) -> np.ndarray:
 
 def main():
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
-    img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg.jpg', cv2.IMREAD_GRAYSCALE)
-    # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
+    # img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
 
     assert img is not None, 'file could not be read, check with os.path.exists()'
 
@@ -143,7 +144,8 @@ def main():
     edges_canny = cv2.Canny(img, 100, 200)
     # edges_canny_2 = canny(img)
     # edges_canny = adaptive_canny(img)
-    edges = smart_morphology(edges_canny)
+    # edges = smart_morphology(edges_canny)
+    edges = edges_canny
 
     candidates = find_license_plate_contours(edges)
     contour_img, bbox_img = draw_contours_and_bboxes(img, candidates)
