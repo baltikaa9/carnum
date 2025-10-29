@@ -25,6 +25,8 @@ def draw_contour_and_bbox(img: np.ndarray, contour: np.ndarray, bbox: BorderBox)
     return contour_img, bbox_img
 
 def main():
+    # TODO: Сегментация символов
+    # TODO: Распознавание символов
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
     img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg1.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)

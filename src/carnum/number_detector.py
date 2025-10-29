@@ -6,31 +6,45 @@ from . import NumberCandidate
 
 
 class NumberDetector:
-    def __init__(self, img: np.ndarray):
+    def __init__(
+        self,
+        img: np.ndarray,
+        contrast_clip_limit: float = 3,
+        contrast_kernel_size: int = 8,
+        target_img_width: int = 1920,
+        target_img_height: int = 1080,
+        dilation_kernel_size: int = 3,
+    ):
         self.img: np.ndarray = img
         self.edges: np.ndarray | None = None
 
+        self.contrast_clip_limit = contrast_clip_limit
+        self.contrast_kernel_size = contrast_kernel_size
+        self.target_img_width = target_img_width
+        self.target_img_height = target_img_height
+        self.dilation_kernel_size = dilation_kernel_size
+
     def detect_number(self) -> NumberCandidate | None:
-        self.__enhance_contrast(3)
+        self.__enhance_contrast()
         self.img = cv2.bilateralFilter(self.img, 3, 25, 75)
         self.__resize_to_target()
 
         self.edges = cv2.Canny(self.img, 100, 200)
-        self.__morphology_dilation(3)
+        self.__morphology_dilation()
 
         candidates = self.__find_contours()
 
         return self.__select_best_candidate(candidates)
 
-    def __enhance_contrast(self, clip_limit: float = 2, kernel_size: int = 8) -> None:
+    def __enhance_contrast(self) -> None:
         """
         Улучшение контрастности
         """
         # CLAHE для улучшения локального контраста
-        clahe = cv2.createCLAHE(clip_limit, (kernel_size, kernel_size))
+        clahe = cv2.createCLAHE(self.contrast_clip_limit, (self.contrast_kernel_size, self.contrast_kernel_size))
         self.img = clahe.apply(self.img)
 
-    def __resize_to_target(self, target_width=1920, target_height=1080) -> float:
+    def __resize_to_target(self) -> float:
         """
         Приведение изображения к целевому размеру с сохранением пропорций
         """
@@ -38,8 +52,8 @@ class NumberDetector:
 
         print(f'Исходный размер: {width}x{height}')
 
-        scale_x = target_width / width
-        scale_y = target_height / height
+        scale_x = self.target_img_width / width
+        scale_y = self.target_img_height / height
 
         scale = min(scale_x, scale_y)
 
@@ -56,11 +70,11 @@ class NumberDetector:
 
         return scale
 
-    def __morphology_dilation(self, kernel_size=2) -> None:
+    def __morphology_dilation(self) -> None:
         """
          Утолщение границ с помощью морфологической дилатации
         """
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (self.dilation_kernel_size, self.dilation_kernel_size))
         self.edges = cv2.dilate(self.edges, kernel, iterations=1)
 
     def __find_contours(self) -> list[NumberCandidate]:
