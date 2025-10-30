@@ -22,9 +22,8 @@ class CharSegmenter:
 
         boxes = self.__filter_contours(contours)
 
-        boxes = sorted(boxes, key=lambda b: b.x)
-
-        return self.__crop_characters(img, boxes)
+        chars = self.__crop_characters(img, boxes)
+        return chars
 
     def __preprocess(self, img: MatLike) -> MatLike:
         binary = cv2.adaptiveThreshold(
@@ -62,7 +61,22 @@ class CharSegmenter:
 
             boxes.append(BoundingBox(x, y, w, h))
 
-        return boxes
+        boxes = sorted(boxes, key=lambda b: b.x)
+
+        filtered = []
+        for box in boxes:
+            if not filtered:
+                filtered.append(box)
+                continue
+            last = filtered[-1]
+            overlap = max(0, min(last.x + last.w, box.x + box.w) - max(last.x, box.x))
+            print(overlap)
+            if overlap > 10:  # если пересекаются — оставляем больший или первый
+                continue
+            filtered.append(box)
+
+
+        return filtered
 
     def __crop_characters(self, img: MatLike, boxes: list[BoundingBox]) -> list[MatLike]:
         chars: list[MatLike] = []

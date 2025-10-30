@@ -35,6 +35,12 @@ def recognize_letter(symbol_img: MatLike) -> str:
     # Убираем шум по краям (опционально)
     # symbol_img = cv2.copyMakeBorder(symbol_img, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=255)
 
+    # _, symbol_img = cv2.threshold(symbol_img, 220, 255, cv2.THRESH_BINARY)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.imshow(symbol_img, cmap='gray')
+
     # Распознаём как один символ
     char = image_to_string(
         symbol_img,
@@ -43,52 +49,18 @@ def recognize_letter(symbol_img: MatLike) -> str:
     ).strip()
 
     # Tesseract иногда возвращает "1" вместо "А" и т.п. — можно добавить пост-обработку
-    return char
+    return fix_letter(char)
 
-def fix_digits(char: str, is_digit_position: bool) -> str:
-    if is_digit_position:
-        # На позиции цифры: исправляем буквы → цифры
-        fixes = {
-            'O': '0',
-            'E': '3',
-            'A': '4',
-            'T': '7',
-            'B': '8',
-            'P': '9',
-            'K': '3',  # частая ошибка: K → 3
-        }
-        return fixes.get(char, char)
-    else:
-        # На позиции буквы: исправляем цифры → буквы
-        fixes = {
-            '0': 'O',
-            '3': 'E',
-            '4': 'У',
-            '6': 'B',  # иногда 6 → B
-            '7': 'T',
-            '8': 'B',
-        }
-        return fixes.get(char, char)
-
-def resize_with_padding(img, target_size=(32, 48)):
-    h, w = img.shape
-    target_w, target_h = target_size
-
-    # Сохраняем пропорции
-    scale = min(target_w / w, target_h / h)
-    new_w = int(w * scale)
-    new_h = int(h * scale)
-
-    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-    # Добавляем белый padding
-    pad_w = target_w - new_w
-    pad_h = target_h - new_h
-    top, bottom = pad_h // 2, pad_h - pad_h // 2
-    left, right = pad_w // 2, pad_w - pad_w // 2
-
-    padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=255)
-    return padded
+def fix_letter(char: str) -> str:
+    # На позиции буквы: исправляем цифры → буквы
+    fixes = {
+        '0': 'O',
+        '4': 'У',
+        '6': 'B',
+        '7': 'T',
+        '8': 'B',
+    }
+    return fixes.get(char, char)
 
 def recognize_digit(symbol_img: MatLike, templates: dict[str, MatLike]) -> str:
     """
@@ -97,15 +69,15 @@ def recognize_digit(symbol_img: MatLike, templates: dict[str, MatLike]) -> str:
     # Приведи к одному размеру
     # resized = resize_with_padding(symbol_img, (32, 48))
     resized = cv2.resize(symbol_img, (32, 48))
-    _, resized = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY)
-    resized = cv2.medianBlur(resized, 3)
+    # _, resized = cv2.threshold(resized, 220, 255, cv2.THRESH_BINARY)
+    # resized = cv2.medianBlur(resized, 3)
 
     # kernel_open = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
     # resized = cv2.morphologyEx(resized, cv2.MORPH_CLOSE, kernel_open)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(341)
-    ax.imshow(resized, cmap='gray')
+    # fig = plt.figure()
+    # ax = fig.add_subplot(341)
+    # ax.imshow(resized, cmap='gray')
 
     # print(symbol_img.shape)
     # print(templates['0'].shape)
@@ -114,19 +86,19 @@ def recognize_digit(symbol_img: MatLike, templates: dict[str, MatLike]) -> str:
     best_score = -1
 
     for digit, tmpl in templates.items():
-        ax = fig.add_subplot(3, 4, int(digit) + 2)
-        ax.imshow(tmpl, cmap='gray')
+        # ax = fig.add_subplot(3, 4, int(digit) + 2)
+        # ax.imshow(tmpl, cmap='gray')
         # Сравниваем по корреляции (чем ближе к 1 — тем лучше)
-        match = cv2.matchTemplate(symbol_img, tmpl, cv2.TM_CCOEFF_NORMED)
+        match = cv2.matchTemplate(resized, tmpl, cv2.TM_CCOEFF_NORMED)
         score = match[0][0]
-        print(f'{score} {digit}')
         if score > best_score:
             best_score = score
             best_match = digit
 
+    print(f'{best_score} {best_match}')
     # Порог: если совпадение слабое — не доверяем
-    if best_score < 0.4:
-        return '?'  # неизвестно
+    # if best_score < 0.4:
+        # return '?'  # неизвестно
     return best_match
 
 def load_templates() -> dict[str, MatLike]:
@@ -142,13 +114,13 @@ def recognize_number(symbols: list[MatLike], templates: dict[str, MatLike]) -> s
     raw_chars = []
     # for sym in symbols:
     for i, c in enumerate(symbols):
-        # is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
+        is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
         # is_digit_pos = i == 1
-        char = recognize_letter(c)
-        # if not is_digit_pos:
-            # char = recognize_letter(c)
-        # else:
-            # char = recognize_digit(c, templates)
+        # char = recognize_letter(c)
+        if not is_digit_pos:
+            char = recognize_letter(c)
+        else:
+            char = recognize_digit(c, templates)
 
         raw_chars.append(char)
 
@@ -169,9 +141,9 @@ def main():
     # TODO: Распознавание символов
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg1.jpg', cv2.IMREAD_GRAYSCALE)
-    img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
+    # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/2025-01-16 23.01.30.jpg', cv2.IMREAD_GRAYSCALE)
-    # img = cv2.imread('img/fine1.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('img/fine1.jpg', cv2.IMREAD_GRAYSCALE)
 
     assert img is not None, 'file could not be read, check with os.path.exists()'
 
