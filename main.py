@@ -90,8 +90,8 @@ def main():
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg1.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
-    # img = cv2.imread('img/PVI_LTtE9Zu3BtFoud-W58xsg2MN3kAfNZA0GZwR0qNdTAhdbDdRwVYHic9fcY5yayS5PezuRW74LI-RFeIxCw.jpg', cv2.IMREAD_GRAYSCALE)
-    img = cv2.imread('img/fine1.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('img/2025-01-16 23.01.30.jpg', cv2.IMREAD_GRAYSCALE)
+    # img = cv2.imread('img/fine1.jpg', cv2.IMREAD_GRAYSCALE)
 
     assert img is not None, 'file could not be read, check with os.path.exists()'
 
@@ -117,20 +117,20 @@ def main():
 
     contour_img, bbox_img = draw_contour_and_bbox(detector.img, number_candidate.contour, number_candidate.bbox)
 
-    # fig = plt.figure()
-    # ax1 = fig.add_subplot(1, 4, 1)
-    # plt.xticks([]), plt.yticks([])
-    # ax2 = fig.add_subplot(1, 4, 2)
-    # plt.xticks([]), plt.yticks([])
-    # ax3 = fig.add_subplot(1, 4, 3)
-    # plt.xticks([]), plt.yticks([])
-    # ax4 = fig.add_subplot(1, 4, 4)
-    # plt.xticks([]), plt.yticks([])
+    fig = plt.figure()
+    ax1 = fig.add_subplot(221)
+    plt.xticks([]), plt.yticks([])
+    ax2 = fig.add_subplot(222)
+    plt.xticks([]), plt.yticks([])
+    ax3 = fig.add_subplot(223)
+    plt.xticks([]), plt.yticks([])
+    ax4 = fig.add_subplot(224)
+    plt.xticks([]), plt.yticks([])
 
-    # ax1.imshow(detector.edges, cmap='gray')
-    # ax2.imshow(contour_img, cmap='gray')
-    # ax3.imshow(bbox_img, cmap='gray')
-    # ax4.imshow(number_img, cmap='gray')
+    ax1.imshow(detector.edges, cmap='gray')
+    ax2.imshow(contour_img, cmap='gray')
+    ax3.imshow(bbox_img, cmap='gray')
+    ax4.imshow(number_img, cmap='gray')
 
     # ax = fig.add_subplot(111)
     # plt.xticks([]), plt.yticks([])
@@ -138,12 +138,19 @@ def main():
 
     n = len(chars)
 
+    if len(chars) == 0:
+        print("No characters found")
+        plt.tight_layout()
+
+        plt.show()
+        exit()
+
     fig, axes = plt.subplots(1, n, figsize=(n * 1.2, 2))
     if n == 1:
         axes = [axes]
     for ax, sym in zip(axes, chars):
         ax.imshow(sym, cmap='gray')
-        ax.axis('off')
+        # ax.axis('off')
     plt.suptitle(f'Найдено {n} символов')
 
     plt.tight_layout()

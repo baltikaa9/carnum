@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import cv2
 from cv2.typing import MatLike
+import matplotlib.pyplot as plt
 
 from src.carnum.border_box import BoundingBox
 
@@ -10,6 +11,12 @@ class CharSegmenter:
 
     def segment_characters(self) -> list[MatLike]:
         img = self.__preprocess(self.img)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        plt.xticks([]), plt.yticks([])
+
+        ax.imshow(img, cmap='gray')
 
         contours, _ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -26,7 +33,7 @@ class CharSegmenter:
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY,
             blockSize=13,
-            C=3,
+            C=5,
         )
 
         # Удаляем мелкие шумы (точки)
@@ -46,7 +53,7 @@ class CharSegmenter:
             if h <= 0.35 * h_img or h >= 0.8 * h_img:
                 continue
 
-            if w > 0.5 * w_img:  # один символ не может занимать больше половины ширины номера
+            if w > 0.125 * w_img:  # один символ не может занимать больше 1/8 ширины номера (т.к. мин. 8 символов)
                 continue
 
             aspect_ratio = w / float(h)
