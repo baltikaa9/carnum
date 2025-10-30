@@ -9,3 +9,6 @@ dependencies = [
     "pygobject>=3.54.5",
     "pytesseract>=0.3.13",
 ]
+
+[tool.ruff]
+ignore = ["E701"]

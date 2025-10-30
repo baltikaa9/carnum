@@ -70,8 +70,7 @@ class CharSegmenter:
                 continue
             last = filtered[-1]
             overlap = max(0, min(last.x + last.w, box.x + box.w) - max(last.x, box.x))
-            print(overlap)
-            if overlap > 10:  # если пересекаются — оставляем больший или первый
+            if overlap > 8:  # если пересекаются — оставляем больший или первый
                 continue
             filtered.append(box)
 

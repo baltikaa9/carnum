@@ -4,8 +4,8 @@ import cv2
 from cv2.typing import MatLike
 import matplotlib
 import matplotlib.pyplot as plt
-from pytesseract import image_to_string
 
+from src.carnum.char_recognizer import CharRecognizer
 from src.carnum.char_segmenter import CharSegmenter
 from src.carnum import BoundingBox
 from src.carnum import NumberDetector
@@ -28,79 +28,6 @@ def draw_contour_and_bbox(img: MatLike, contour: MatLike, bbox: BoundingBox) -> 
 
     return contour_img, bbox_img
 
-def recognize_letter(symbol_img: MatLike) -> str:
-    """
-    Распознаёт один символ с помощью Tesseract.
-    """
-    # Убираем шум по краям (опционально)
-    # symbol_img = cv2.copyMakeBorder(symbol_img, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=255)
-
-    # _, symbol_img = cv2.threshold(symbol_img, 220, 255, cv2.THRESH_BINARY)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.imshow(symbol_img, cmap='gray')
-
-    # Распознаём как один символ
-    char = image_to_string(
-        symbol_img,
-        lang='eng',
-        config='--psm 10 --oem 3 -c tessedit_char_whitelist=ABEKMHOPCTYX0123456789'
-    ).strip()
-
-    # Tesseract иногда возвращает "1" вместо "А" и т.п. — можно добавить пост-обработку
-    return fix_letter(char)
-
-def fix_letter(char: str) -> str:
-    # На позиции буквы: исправляем цифры → буквы
-    fixes = {
-        '0': 'O',
-        '4': 'У',
-        '6': 'B',
-        '7': 'T',
-        '8': 'B',
-    }
-    return fixes.get(char, char)
-
-def recognize_digit(symbol_img: MatLike, templates: dict[str, MatLike]) -> str:
-    """
-    Распознаёт цифру методом сравнения с шаблонами.
-    """
-    # Приведи к одному размеру
-    # resized = resize_with_padding(symbol_img, (32, 48))
-    resized = cv2.resize(symbol_img, (32, 48))
-    # _, resized = cv2.threshold(resized, 220, 255, cv2.THRESH_BINARY)
-    # resized = cv2.medianBlur(resized, 3)
-
-    # kernel_open = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
-    # resized = cv2.morphologyEx(resized, cv2.MORPH_CLOSE, kernel_open)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(341)
-    # ax.imshow(resized, cmap='gray')
-
-    # print(symbol_img.shape)
-    # print(templates['0'].shape)
-
-    best_match = None
-    best_score = -1
-
-    for digit, tmpl in templates.items():
-        # ax = fig.add_subplot(3, 4, int(digit) + 2)
-        # ax.imshow(tmpl, cmap='gray')
-        # Сравниваем по корреляции (чем ближе к 1 — тем лучше)
-        match = cv2.matchTemplate(resized, tmpl, cv2.TM_CCOEFF_NORMED)
-        score = match[0][0]
-        if score > best_score:
-            best_score = score
-            best_match = digit
-
-    print(f'{best_score} {best_match}')
-    # Порог: если совпадение слабое — не доверяем
-    # if best_score < 0.4:
-        # return '?'  # неизвестно
-    return best_match
-
 def load_templates() -> dict[str, MatLike]:
     templates: dict[str, MatLike] = {}
     for d in '0123456789':
@@ -109,32 +36,6 @@ def load_templates() -> dict[str, MatLike]:
         if img is not None:
             templates[d] = img
     return templates
-
-def recognize_number(symbols: list[MatLike], templates: dict[str, MatLike]) -> str:
-    raw_chars = []
-    # for sym in symbols:
-    for i, c in enumerate(symbols):
-        is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
-        # is_digit_pos = i == 1
-        # char = recognize_letter(c)
-        if not is_digit_pos:
-            char = recognize_letter(c)
-        else:
-            char = recognize_digit(c, templates)
-
-        raw_chars.append(char)
-
-    text = ''.join(raw_chars)
-    print('Сырой результат:', text)
-
-    # Исправление по позициям (пример для 8-символьного номера)
-    # corrected = ''
-    # for i, c in enumerate(text):
-    #     is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
-
-    #     corrected += fix_digits(c, is_digit_pos)
-
-    return text
 
 def main():
     # TODO: Сегментация символов
@@ -166,9 +67,9 @@ def main():
 
     chars = segmenter.segment_characters()
 
-    templates = load_templates()
+    recognizer = CharRecognizer(chars, load_templates())
 
-    print(recognize_number(chars, templates))
+    print(recognizer.recognize())
 
     contour_img, bbox_img = draw_contour_and_bbox(detector.img, number_candidate.contour, number_candidate.bbox)
 
