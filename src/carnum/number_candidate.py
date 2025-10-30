@@ -3,13 +3,13 @@ from typing import override
 
 from cv2.typing import MatLike
 
-from . import BorderBox
+from . import BoundingBox
 
 
 @dataclass
 class NumberCandidate:
     contour: MatLike
-    bbox: BorderBox
+    bbox: BoundingBox
     area: float
     aspect_ratio: float
 

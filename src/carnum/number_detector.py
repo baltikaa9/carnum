@@ -1,7 +1,7 @@
 import cv2
 from cv2.typing import MatLike
 
-from . import BorderBox
+from . import BoundingBox
 from . import NumberCandidate
 
 
@@ -109,7 +109,7 @@ class NumberDetector:
 
             candidate = NumberCandidate(
                 approx,
-                BorderBox(x, y, w, h),
+                BoundingBox(x, y, w, h),
                 area,
                 aspect_ratio,
             )

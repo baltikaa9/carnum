@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class BorderBox:
+class BoundingBox:
     x: int
     y: int
     w: int
