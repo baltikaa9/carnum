@@ -1,5 +1,5 @@
 import cv2
-import numpy as np
+from cv2.typing import MatLike
 
 from . import BorderBox
 from . import NumberCandidate
@@ -8,33 +8,36 @@ from . import NumberCandidate
 class NumberDetector:
     def __init__(
         self,
-        img: np.ndarray,
+        img: MatLike,
         contrast_clip_limit: float = 3,
         contrast_kernel_size: int = 8,
         target_img_width: int = 1920,
         target_img_height: int = 1080,
         dilation_kernel_size: int = 3,
     ):
-        self.img: np.ndarray = img
-        self.edges: np.ndarray | None = None
+        self.img: MatLike = img
+        self.edges: MatLike
 
-        self.contrast_clip_limit = contrast_clip_limit
-        self.contrast_kernel_size = contrast_kernel_size
-        self.target_img_width = target_img_width
-        self.target_img_height = target_img_height
-        self.dilation_kernel_size = dilation_kernel_size
+        self.contrast_clip_limit: float = contrast_clip_limit
+        self.contrast_kernel_size: int = contrast_kernel_size
+        self.target_img_width: int = target_img_width
+        self.target_img_height: int = target_img_height
+        self.dilation_kernel_size: int = dilation_kernel_size
 
     def detect_number(self) -> NumberCandidate | None:
+        self.__preprocess_img()
+        candidates = self.__find_number_candidates()
+        return self.__select_best_candidate(candidates)
+
+    def __preprocess_img(self) -> None:
         self.__enhance_contrast()
         self.img = cv2.bilateralFilter(self.img, 3, 25, 75)
-        self.__resize_to_target()
+        self.img, _ = self.resize_to_target(self.img)
 
+    def __find_number_candidates(self) -> list[NumberCandidate]:
         self.edges = cv2.Canny(self.img, 100, 200)
         self.__morphology_dilation()
-
-        candidates = self.__find_contours()
-
-        return self.__select_best_candidate(candidates)
+        return self.__find_contours()
 
     def __enhance_contrast(self) -> None:
         """
@@ -44,11 +47,11 @@ class NumberDetector:
         clahe = cv2.createCLAHE(self.contrast_clip_limit, (self.contrast_kernel_size, self.contrast_kernel_size))
         self.img = clahe.apply(self.img)
 
-    def __resize_to_target(self) -> float:
+    def resize_to_target(self, img: MatLike) -> tuple[MatLike, float]:
         """
         Приведение изображения к целевому размеру с сохранением пропорций
         """
-        height, width = self.img.shape[:2]
+        height, width = img.shape[:2]
 
         print(f'Исходный размер: {width}x{height}')
 
@@ -59,16 +62,16 @@ class NumberDetector:
 
         if scale <= 1:
             print('Изображение уже больше целевого размера, оставляем как есть')
-            return 1.0
+            return img, 1.0
 
         new_width = int(width * scale)
         new_height = int(height * scale)
 
         print(f'Новый размер: {new_width}x{new_height}, масштаб: {scale:.2f}')
 
-        self.img = cv2.resize(self.img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
 
-        return scale
+        return img, scale
 
     def __morphology_dilation(self) -> None:
         """
