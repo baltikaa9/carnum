@@ -4,6 +4,7 @@ import cv2
 from cv2.typing import MatLike
 import matplotlib
 import matplotlib.pyplot as plt
+from pytesseract import image_to_string
 
 from src.carnum.char_segmenter import CharSegmenter
 from src.carnum import BoundingBox
@@ -27,70 +28,149 @@ def draw_contour_and_bbox(img: MatLike, contour: MatLike, bbox: BoundingBox) -> 
 
     return contour_img, bbox_img
 
-# def segment_characters(number_img: MatLike) -> list[MatLike]:
-#     binary = cv2.adaptiveThreshold(
-#         number_img,
-#         255,
-#         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-#         cv2.THRESH_BINARY,
-#         blockSize=13,
-#         C=3,
-#     )
+def recognize_letter(symbol_img: MatLike) -> str:
+    """
+    Распознаёт один символ с помощью Tesseract.
+    """
+    # Убираем шум по краям (опционально)
+    # symbol_img = cv2.copyMakeBorder(symbol_img, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=255)
 
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     plt.xticks([]), plt.yticks([])
+    # Распознаём как один символ
+    char = image_to_string(
+        symbol_img,
+        lang='eng',
+        config='--psm 10 --oem 3 -c tessedit_char_whitelist=ABEKMHOPCTYX0123456789'
+    ).strip()
 
-#     # 2. Морфологическая очистка
-#     # Удаляем мелкие шумы (точки)
-#     kernel_open = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-#     binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel_open)
+    # Tesseract иногда возвращает "1" вместо "А" и т.п. — можно добавить пост-обработку
+    return char
 
-#     # Закрываем мелкие разрывы внутри символов (например, в "8", "Б")
-#     # kernel_close = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-#     # binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel_close)
+def fix_digits(char: str, is_digit_position: bool) -> str:
+    if is_digit_position:
+        # На позиции цифры: исправляем буквы → цифры
+        fixes = {
+            'O': '0',
+            'E': '3',
+            'A': '4',
+            'T': '7',
+            'B': '8',
+            'P': '9',
+            'K': '3',  # частая ошибка: K → 3
+        }
+        return fixes.get(char, char)
+    else:
+        # На позиции буквы: исправляем цифры → буквы
+        fixes = {
+            '0': 'O',
+            '3': 'E',
+            '4': 'У',
+            '6': 'B',  # иногда 6 → B
+            '7': 'T',
+            '8': 'B',
+        }
+        return fixes.get(char, char)
 
-#     ax.imshow(binary, cmap='gray')
-#     contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+def resize_with_padding(img, target_size=(32, 48)):
+    h, w = img.shape
+    target_w, target_h = target_size
 
-    # 4. Фильтрация контуров
-    # h_img, w_img = binary.shape
-    # boxes = []
-    # for cnt in contours:
-    #     x, y, w, h = cv2.boundingRect(cnt)
+    # Сохраняем пропорции
+    scale = min(target_w / w, target_h / h)
+    new_w = int(w * scale)
+    new_h = int(h * scale)
 
-    #     if w < 5 or h < 10:
-    #         continue
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-    #     if h <= 0.35 * h_img or h >= 0.8 * h_img:
-    #         continue
+    # Добавляем белый padding
+    pad_w = target_w - new_w
+    pad_h = target_h - new_h
+    top, bottom = pad_h // 2, pad_h - pad_h // 2
+    left, right = pad_w // 2, pad_w - pad_w // 2
 
-    #     if w > 0.5 * w_img:  # один символ не может занимать больше половины ширины номера
-    #         continue
+    padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=255)
+    return padded
 
-    #     aspect_ratio = w / float(h)
-    #     if aspect_ratio > 1.2:
-    #         continue
+def recognize_digit(symbol_img: MatLike, templates: dict[str, MatLike]) -> str:
+    """
+    Распознаёт цифру методом сравнения с шаблонами.
+    """
+    # Приведи к одному размеру
+    # resized = resize_with_padding(symbol_img, (32, 48))
+    resized = cv2.resize(symbol_img, (32, 48))
+    _, resized = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY)
+    resized = cv2.medianBlur(resized, 3)
 
-    #     boxes.append((x, y, w, h))
+    # kernel_open = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
+    # resized = cv2.morphologyEx(resized, cv2.MORPH_CLOSE, kernel_open)
 
-    # 5. Сортируем слева направо
-    # boxes = sorted(boxes, key=lambda b: b[0])
+    fig = plt.figure()
+    ax = fig.add_subplot(341)
+    ax.imshow(resized, cmap='gray')
 
-    # chars = []
-    # for (x, y, w, h) in boxes:
-    #     char_img = binary[y:y+h, x:x+w]
-    #     chars.append(char_img)
+    # print(symbol_img.shape)
+    # print(templates['0'].shape)
 
-    # return chars
+    best_match = None
+    best_score = -1
+
+    for digit, tmpl in templates.items():
+        ax = fig.add_subplot(3, 4, int(digit) + 2)
+        ax.imshow(tmpl, cmap='gray')
+        # Сравниваем по корреляции (чем ближе к 1 — тем лучше)
+        match = cv2.matchTemplate(symbol_img, tmpl, cv2.TM_CCOEFF_NORMED)
+        score = match[0][0]
+        print(f'{score} {digit}')
+        if score > best_score:
+            best_score = score
+            best_match = digit
+
+    # Порог: если совпадение слабое — не доверяем
+    if best_score < 0.4:
+        return '?'  # неизвестно
+    return best_match
+
+def load_templates() -> dict[str, MatLike]:
+    templates: dict[str, MatLike] = {}
+    for d in '0123456789':
+        path = f'img/templates/{d}.png'
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if img is not None:
+            templates[d] = img
+    return templates
+
+def recognize_number(symbols: list[MatLike], templates: dict[str, MatLike]) -> str:
+    raw_chars = []
+    # for sym in symbols:
+    for i, c in enumerate(symbols):
+        # is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
+        # is_digit_pos = i == 1
+        char = recognize_letter(c)
+        # if not is_digit_pos:
+            # char = recognize_letter(c)
+        # else:
+            # char = recognize_digit(c, templates)
+
+        raw_chars.append(char)
+
+    text = ''.join(raw_chars)
+    print('Сырой результат:', text)
+
+    # Исправление по позициям (пример для 8-символьного номера)
+    # corrected = ''
+    # for i, c in enumerate(text):
+    #     is_digit_pos = i not in [0, 4, 5]  # кроме 0,4,5 — цифры
+
+    #     corrected += fix_digits(c, is_digit_pos)
+
+    return text
 
 def main():
     # TODO: Сегментация символов
     # TODO: Распознавание символов
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg1.jpg', cv2.IMREAD_GRAYSCALE)
-    # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
-    img = cv2.imread('img/2025-01-16 23.01.30.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
+    # img = cv2.imread('img/2025-01-16 23.01.30.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/fine1.jpg', cv2.IMREAD_GRAYSCALE)
 
     assert img is not None, 'file could not be read, check with os.path.exists()'
@@ -113,7 +193,10 @@ def main():
     # ax.imshow(binary, cmap='gray')
 
     chars = segmenter.segment_characters()
-    print(len(chars))
+
+    templates = load_templates()
+
+    print(recognize_number(chars, templates))
 
     contour_img, bbox_img = draw_contour_and_bbox(detector.img, number_candidate.contour, number_candidate.bbox)
 
