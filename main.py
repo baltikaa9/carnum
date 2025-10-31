@@ -1,10 +1,13 @@
 import os
+import sys
 
+from PySide6.QtWidgets import QApplication
 import cv2
 from cv2.typing import MatLike
 import matplotlib
 import matplotlib.pyplot as plt
 
+from src.carnum.main_window import MainWindow
 from src.carnum.char_recognizer import CharRecognizer
 from src.carnum.char_segmenter import CharSegmenter
 from src.carnum import BoundingBox
@@ -38,8 +41,10 @@ def load_templates() -> dict[str, MatLike]:
     return templates
 
 def main():
-    # TODO: Сегментация символов
-    # TODO: Распознавание символов
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    # return
     # img = cv2.imread('img/01-715.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/154yn1QYKvMGFzWM75SG8NjK64po-CwRLOsLqI4-4sI8yNuiOS1qpod1d_8sk8YFsygRv5QLsLgnc1uJhskSEg1.jpg', cv2.IMREAD_GRAYSCALE)
     # img = cv2.imread('img/14.jpg', cv2.IMREAD_GRAYSCALE)
@@ -58,12 +63,6 @@ def main():
     number_img = detector.img[y:y + h, x:x + w]
 
     segmenter = CharSegmenter(number_img)
-    # number_img_res, _ = detector.resize_to_target(number_img)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # plt.xticks([]), plt.yticks([])
-    # ax.imshow(binary, cmap='gray')
 
     chars = segmenter.segment_characters()
 
@@ -71,47 +70,11 @@ def main():
 
     print(recognizer.recognize())
 
-    contour_img, bbox_img = draw_contour_and_bbox(detector.img, number_candidate.contour, number_candidate.bbox)
+    contour_img, _ = draw_contour_and_bbox(detector.img, number_candidate.contour, number_candidate.bbox)
 
-    fig = plt.figure()
-    ax1 = fig.add_subplot(221)
-    plt.xticks([]), plt.yticks([])
-    ax2 = fig.add_subplot(222)
-    plt.xticks([]), plt.yticks([])
-    ax3 = fig.add_subplot(223)
-    plt.xticks([]), plt.yticks([])
-    ax4 = fig.add_subplot(224)
-    plt.xticks([]), plt.yticks([])
+    window.imshow(detector.edges, contour_img, number_img, chars)
 
-    ax1.imshow(detector.edges, cmap='gray')
-    ax2.imshow(contour_img, cmap='gray')
-    ax3.imshow(bbox_img, cmap='gray')
-    ax4.imshow(number_img, cmap='gray')
-
-    # ax = fig.add_subplot(111)
-    # plt.xticks([]), plt.yticks([])
-    # ax.imshow(binary, cmap='gray')
-
-    n = len(chars)
-
-    if len(chars) == 0:
-        print("No characters found")
-        plt.tight_layout()
-
-        plt.show()
-        exit()
-
-    fig, axes = plt.subplots(1, n, figsize=(n * 1.2, 2))
-    if n == 1:
-        axes = [axes]
-    for ax, sym in zip(axes, chars):
-        ax.imshow(sym, cmap='gray')
-        # ax.axis('off')
-    plt.suptitle(f'Найдено {n} символов')
-
-    plt.tight_layout()
-
-    plt.show()
+    sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()

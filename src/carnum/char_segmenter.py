@@ -3,7 +3,7 @@ import cv2
 from cv2.typing import MatLike
 import matplotlib.pyplot as plt
 
-from src.carnum.border_box import BoundingBox
+from . import BoundingBox
 
 class CharSegmenter:
     def __init__(self, number_img: MatLike):
