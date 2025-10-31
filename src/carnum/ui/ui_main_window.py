@@ -64,9 +64,14 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_5.addWidget(self.label)
 
-        self.output_number = QLineEdit(self.widget)
+        self.output_number = QLabel(self.widget)
         self.output_number.setObjectName(u"output_number")
-        self.output_number.setEnabled(False)
+        font = QFont()
+        font.setBold(True)
+        self.output_number.setFont(font)
+        self.output_number.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
+        self.output_number.setMouseTracking(False)
+        self.output_number.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextSelectableByKeyboard|Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self.horizontalLayout_5.addWidget(self.output_number)
 
@@ -97,6 +102,7 @@ class Ui_MainWindow(object):
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u043f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u044f", None))
         self.select_path.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440", None))
+        self.output_number.setText("")
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0442\u044c", None))
     # retranslateUi
 

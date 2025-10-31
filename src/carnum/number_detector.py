@@ -1,8 +1,8 @@
 import cv2
 from cv2.typing import MatLike
 
-from . import BoundingBox
-from . import NumberCandidate
+from src.carnum import BoundingBox
+from src.carnum import NumberCandidate
 
 
 class NumberDetector:

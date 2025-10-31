@@ -3,7 +3,7 @@ from typing import override
 
 from cv2.typing import MatLike
 
-from . import BoundingBox
+from src.carnum import BoundingBox
 
 
 @dataclass
