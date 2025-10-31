@@ -35,11 +35,14 @@ class Ui_MainWindow(object):
 
         self.control_widget = QWidget(self.centralwidget)
         self.control_widget.setObjectName(u"control_widget")
-        self.control_widget.setMaximumSize(QSize(300, 16777215))
+        self.control_widget.setMaximumSize(QSize(500, 16777215))
         self.verticalLayout = QVBoxLayout(self.control_widget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.groupBox = QGroupBox(self.control_widget)
         self.groupBox.setObjectName(u"groupBox")
+        font = QFont()
+        font.setPointSize(16)
+        self.groupBox.setFont(font)
         self.horizontalLayout_4 = QHBoxLayout(self.groupBox)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.input_path = QLineEdit(self.groupBox)
@@ -61,14 +64,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.label = QLabel(self.widget)
         self.label.setObjectName(u"label")
+        self.label.setFont(font)
 
         self.horizontalLayout_5.addWidget(self.label)
 
         self.output_number = QLabel(self.widget)
         self.output_number.setObjectName(u"output_number")
-        font = QFont()
-        font.setBold(True)
-        self.output_number.setFont(font)
+        font1 = QFont()
+        font1.setPointSize(16)
+        font1.setBold(True)
+        self.output_number.setFont(font1)
         self.output_number.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         self.output_number.setMouseTracking(False)
         self.output_number.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextSelectableByKeyboard|Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -80,6 +85,7 @@ class Ui_MainWindow(object):
 
         self.pushButton = QPushButton(self.control_widget)
         self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setFont(font)
 
         self.verticalLayout.addWidget(self.pushButton)
 

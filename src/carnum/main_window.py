@@ -36,10 +36,13 @@ class MainWindow(QMainWindow):
         self.figure.clear()
         ax1 = self.figure.add_subplot(231)
         ax1.set_xticks([]), ax1.set_yticks([])
+        ax1.set_title('Выделенные границы')
         ax2 = self.figure.add_subplot(232)
         ax2.set_xticks([]), ax2.set_yticks([])
+        ax2.set_title('Найденный контур номера')
         ax3 = self.figure.add_subplot(233)
         ax3.set_xticks([]), ax3.set_yticks([])
+        ax3.set_title('Вырезанный номер')
 
         ax1.imshow(edges, cmap='gray')
         ax2.imshow(contour_img, cmap='gray')
