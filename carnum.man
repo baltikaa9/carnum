@@ -115,6 +115,7 @@ Matplotlib >= 3.10.7 — визуализация
 .Xr uv 1 ,
 .Xr python 1 ,
 .Xr tesseract 1
+
 .Sh АВТОРЫ
 .An Автор проекта
 .An baltikaa9
